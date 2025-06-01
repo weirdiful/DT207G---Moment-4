@@ -7,71 +7,65 @@ const jwt = require("jsonwebtoken");
 
 const db = new sqlite3.Database(process.env.DATABASE);
 
+// Registrering
 router.post("/register", async (req, res) => {
     try {
         const { username, password } = req.body;
 
         if (!username || !password) {
-            return res.status(400).json({ error: "Invalid input, send username and password"});
+            return res.status(400).json({ error: "Invalid input, send username and password" });
         }
 
-        const hashedPassword = await bcrypt.hash(req.body.password, 10);
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-        const sql = `INSERT INTO users(username, password) VALUES(?,?)`;
-        db.run(sql, [username, password], (err) => {
-
-             if(err) {
-                res.status(400).json({ message: "Error creating user"});
-
-        } else {
-            res.status(201).json({message: "User created"});
-        }
-
+        const sql = `INSERT INTO users(username, password) VALUES(?, ?)`;
+        db.run(sql, [username, hashedPassword], (err) => {
+            if (err) {
+                return res.status(400).json({ message: "Error creating user" });
+            }
+            res.status(201).json({ message: "User created" });
         });
 
-       
-
     } catch (error) {
-        res.status(500).json({ error: "Server error"});
+        res.status(500).json({ error: "Server error" });
     }
 });
 
-router.post("/login", async(req, res) => {
+// Inloggning
+router.post("/login", async (req, res) => {
     try {
         const { username, password } = req.body;
 
-        if(!username || !password) {
-            return res.status(400).json({ error: "Invalid input, send username and password"});
+        if (!username || !password) {
+            return res.status(400).json({ error: "Invalid input, send username and password" });
         }
 
-       const sql = `SELECT * FROM users WHERE username=?`;
-       db.get(sql, [username], async (err, row) => {
-        if(err) {
-            res.status(400).json({message: "Error authenticating"});
-        } else if(!row) {
-            res.status(401).json({message: "Incorrect username/password"});
-        } else {
+        const sql = `SELECT * FROM users WHERE username=?`;
+        db.get(sql, [username], async (err, row) => {
+            if (err) {
+                return res.status(400).json({ message: "Error authenticating" });
+            } else if (!row) {
+                return res.status(401).json({ message: "Incorrect username/password" });
+            }
+
             const passwordMatch = await bcrypt.compare(password, row.password);
 
-            if(!passwordMatch) {
-                res.status(401).json({message: "Incorrect username/password"});
-            } else {
-
-                //JWT
-                const payload = {username: username};
-                const token = jwt.sign(payload, process.env.JWT_SECRET_KEY, { expiresIn: '1h'});
-                const response = {
-                    message: "User logged in!",
-                    token: token
-                }
-                res.status(200).json({ response});
+            if (!passwordMatch) {
+                return res.status(401).json({ message: "Incorrect username/password" });
             }
-         }
-       });
 
-       } catch(error) {
-        res.status(500).json({ error: "Server error"});
-       }
+            const payload = { username: username };
+            const token = jwt.sign(payload, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+
+            res.status(200).json({
+                message: "User logged in!",
+                token: token
+            });
+        });
+
+    } catch (error) {
+        res.status(500).json({ error: "Server error" });
+    }
 });
 
 module.exports = router;
