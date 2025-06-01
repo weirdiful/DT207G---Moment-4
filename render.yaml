@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: jwt-auth-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: JWT_SECRET_KEY
+        value: dt207gmoment4joni2412
+      - key: DATABASE
+        value: ./db/moment4.db
